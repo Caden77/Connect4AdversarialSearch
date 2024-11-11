@@ -52,12 +52,42 @@ class AIPlayer:
         RETURNS:
         The 0 based index of the column that represents the next move
         """
+
         moves = get_valid_moves(board)
         best_move = np.random.choice(moves)
 
         #YOUR ALPHA-BETA CODE GOES HERE
 
         return best_move
+    
+    #return a move
+    def get_recursive_alpha_beta_move(self, board, player_num, depth):
+        # returns a tuple with (action, value associated).
+        # Actions that are closer to a goal will return a higher absolute value.
+        # Goal states will have the highest absolute value of any state
+
+        #possible combinations:
+        # Horizontal: 4 different ways per row (6 rows) = 24 goal states
+        # Vertical: 3 different ways per column (7 col) = 21 goal states
+        # Diagonal: Requires a 4x4 grid, 2 times per grid.
+        #           3 different grids vertically, 4 different grids horizontally.
+        #           (2 * 3 * 4) = 24 goal states
+        # Max number of goal states = 24 + 21 + 24 = 69 (nice!)
+        # Note: can also get two goal states at the same time (diagonal and vertical for example)
+
+        print("hi there")
+
+        #base case: one player wins
+        if (is_winning_state(board, player_num)):
+            #return the max value for the current player
+            return 
+
+        #base case: tie
+        if (get_valid_moves(board) == None):
+            #return the middle value for the current player
+            return 0
+
+
 
 
     def get_mcts_move(self, board):
@@ -110,6 +140,9 @@ class AIPlayer:
         best_move = np.random.choice(moves)
         
         #YOUR EXPECTIMAX CODE GOES HERE
+        #Open ended
+        #Idea: look at all touching edges along the board, for touching edges look at what
+        # is being touched, if there are more in a row along that angle then we get a higher score
 
         return best_move
 
@@ -135,7 +168,157 @@ class AIPlayer:
 
         #YOUR EVALUATION FUNCTION GOES HERE
 
-        return 0
+        # Player 1 is maximizing values
+        # Player 2 is minimizing values
+
+        #Evaluation function will count the number of available goal states still available,
+        #   for the current player, (the more possibilities the better) minus the number of available
+        #   goal states for the other player
+
+        #For partial goals the closer the goal is to being complete the better, thus for every goal
+        # state that is considered, multiply the initial value of the goal state being possible by...
+        # (1 + num of tokens in goal state). Because the function should stop on a solution,
+        # the max number we could get to is 69 * (1 + 3) = 69 * 4 = 276. Thus lets make a goal nodes value
+        # equal to a little above that at 300 lets say.
+
+        #two tokens in a row may count for two goal states, one counted with a multiplier of 2 while the other
+        # has a multiplier of 3. (not so if there is a token blocking the end of the board or not)
+
+        #heuristics possibilities:
+        # most possible win's
+        # most filled goal positions
+        # prefer goal positions that cannot be immediatley blocked (there is not a coin under it)
+        # prefer positions closer to the middle of the board (more possible combinations)
+
+
+        #return max values for a winning state
+        if is_winning_state(board, 1):
+            #return max evaluation value
+            return 300
+        elif is_winning_state(board, 2):
+            return -300
+        
+        #Implementing most possible wins evaluation
+        numGoalsFor1 = 0
+        numGoalsFor2 = 0
+        #columns
+        for currCol in range(0, 7):
+            #possible start rows
+            for startR in range(0, 3):
+                #for every goal list
+
+                filled1Positions = 0
+                filled2Positions = 0
+                isGoal1 = True #assume this goalList is all 0's
+                isGoal2 = True
+                for goalOffsetR in range(3, -1, -1):
+                    #go backwards, if we encounter a 0, the rest are also 0
+                    goalPosR = startR + goalOffsetR
+                    posVal = board[goalPosR, currCol]
+                    if (posVal == 1):
+                        #filled1Positions += 1
+                        isGoal2 = False
+                    elif (posVal == 2):
+                        #filled2Positions += 1
+                        isGoal1 = False
+                    else:
+                        #value of 0
+                        break
+                    if isGoal2 == False and isGoal1 == False:
+                        #no valid goal, go to next goal list
+                        break
+
+                #add the valid goals to the total
+                if isGoal1 == True:
+                    numGoalsFor1 += 1
+                if isGoal2 == True:
+                    numGoalsFor2 += 1
+        
+        #rows
+        for currRow in range(0, 6):
+            #possible start cols
+            for startC in range(0, 4):
+                #for every goal list
+
+                filled1Positions = 0
+                filled2Positions = 0
+                isGoal1 = True #assume this goalList is all 0's
+                isGoal2 = True
+                for goalOffsetC in range(0, 4):
+                    goalPosC = startC + goalOffsetC
+                    posVal = board[currRow, goalPosC]
+                    #if invalid position for a player
+                    if (posVal == 1):
+                        isGoal2 = False
+                    if (posVal == 2):
+                        isGoal1 = False
+                    
+                    if isGoal1 == False and isGoal2 == False:
+                        break
+                
+                #add the valid goals to the total
+                if isGoal1 == True:
+                    numGoalsFor1 += 1
+                if isGoal2 == True:
+                    numGoalsFor2 += 1
+        
+        #diagonals (top left to bottom right)
+        for startRow in range(0, 3):
+            for startCol in range(0, 4):
+                #if invalid position for a player mark it as so
+                filled1Positions = 0
+                filled2Positions = 0
+                isGoal1 = True #assume this goalList is all 0's
+                isGoal2 = True
+                #for each top left to down right goal list
+                for tokenNum in range(0, 4):
+                    goalPosR = startRow + tokenNum
+                    goalPosC = startCol + tokenNum
+                    posVal = board[goalPosR, goalPosC]
+                    #if invalid position for a player
+                    if (posVal == 1):
+                        isGoal2 = False
+                    if (posVal == 2):
+                        isGoal1 = False
+                    
+                    if isGoal1 == False and isGoal2 == False:
+                        break
+                #add the valid goals to the total
+                if isGoal1 == True:
+                    numGoalsFor1 += 1
+                if isGoal2 == True:
+                    numGoalsFor2 += 1
+
+        #diagonals (bottom left to top right)
+        for startRow in range(0, 3):
+            for startCol in range(0, 4):
+                #if invalid position for a player mark it as so
+                filled1Positions = 0
+                filled2Positions = 0
+                isGoal1 = True #assume this goalList is all 0's
+                isGoal2 = True
+
+                #for each down left to top right goal list
+                oppositeRow = 5 - startRow
+                for tokenNum in range(0, 4):
+                    goalPosR = oppositeRow - tokenNum
+                    goalPosC = startCol + tokenNum
+                    posVal = board[goalPosR, goalPosC]
+                    #if invalid position for a player
+                    if (posVal == 1):
+                        isGoal2 = False
+                    if (posVal == 2):
+                        isGoal1 = False
+                    
+                    if isGoal1 == False and isGoal2 == False:
+                        break
+                #add the valid goals to the total
+                if isGoal1 == True:
+                    numGoalsFor1 += 1
+                if isGoal2 == True:
+                    numGoalsFor2 += 1
+
+        return numGoalsFor1 - numGoalsFor2
 
 
 class RandomPlayer:
