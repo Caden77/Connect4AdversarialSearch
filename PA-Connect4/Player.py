@@ -63,11 +63,11 @@ class AIPlayer:
         print("single value:")
         print(board[0][0])
         print("Is winning state?")
-        newBoard = np.array([[0]*7]*6)
-        print(is_winning_state(newBoard, self.player_number))
+        # newBoard = np.array([[0]*7]*6)
+        print(is_winning_state(board, self.player_number))
 
         #YOUR ALPHA-BETA CODE GOES HERE
-        minmax = (-1 * np.inf, np.inf)
+        minmax = [-1 * np.inf, np.inf]
         for move in moves:
             #don't check above what we are currently deciding
             #make new board and execute the move
@@ -95,7 +95,7 @@ class AIPlayer:
         print(" end of alpha beta move")
         return best_move
     
-    def get_working_valid_moves(board):
+    def get_working_valid_moves(self, board):
         valid_moves = []
         #columns
         for currCol in range(0, 7):
@@ -141,7 +141,7 @@ class AIPlayer:
             return self.evaluation_function(board)
         
         moves = get_valid_moves(board)
-        minmax = (-1 * np.inf, np.inf)
+        minmax = [-1 * np.inf, np.inf]
         for move in moves:
 
             if (minmax[0] != -1 * np.inf and player_num == 1 and minmax[0] > parent_range[1]):
@@ -649,42 +649,169 @@ def make_move(board,move,player_number):
 def get_valid_moves(board):
     valid_moves = []
     for c in range(7):
-        if 0 in board[:,c]:
-            valid_moves.append(c)
+        for r in range(6):
+            if 0 == board[r][c]:
+                valid_moves.append(c)
+                break
     return valid_moves
 
 #This function returns true if player_num is winning on board
 def is_winning_state(board, player_num):
-    player_win_str = '{0}{0}{0}{0}'.format(player_num)
-    to_str = lambda a: ''.join(a.astype(str))
+    #Check if winning for...
 
-    def check_horizontal(b):
-        for row in b:
-            if player_win_str in to_str(row):
+    #columns
+    for currCol in range(0, 7):
+        #possible start rows
+        for startR in range(0, 3):
+            #for every goal list
+
+            isGoal1 = True #assume this goalList is all 0's
+            isGoal2 = True
+            for goalOffsetR in range(3, -1, -1):
+                #go backwards, if we encounter a 0, the rest are also 0
+                goalPosR = startR + goalOffsetR
+                posVal = board[goalPosR][currCol]
+                if (posVal == 1):
+                    #filled1Positions += 1
+                    isGoal2 = False
+                elif (posVal == 2):
+                    #filled2Positions += 1
+                    isGoal1 = False
+                else:
+                    isGoal1 = False
+                    isGoal2 = False
+
+                if isGoal1 == False and isGoal2 == False:
+                    break
+
+            #add the valid goals to the total
+            if isGoal1 == True and player_num == 1:
                 return True
-        return False
+            if isGoal2 == True and player_num == 2:
+                return True
+    
+    #rows
+    for currRow in range(0, 6):
+        #possible start cols
+        for startC in range(0, 4):
+            #for every goal list
 
-    def check_verticle(b):
-        return check_horizontal(b.T)
+            isGoal1 = True #assume this goalList is all 0's
+            isGoal2 = True
+            for goalOffsetC in range(0, 4):
+                goalPosC = startC + goalOffsetC
+                posVal = board[currRow][goalPosC]
+                #if invalid position for a player
+                if (posVal == 1):
+                    isGoal2 = False
+                elif (posVal == 2):
+                    isGoal1 = False
+                else:
+                    isGoal1 = False
+                    isGoal2 = False
 
-    def check_diagonal(b):
-        for op in [None, np.fliplr]:
-            op_board = op(b) if op else b
+                if isGoal1 == False and isGoal2 == False:
+                    break
             
-            root_diag = np.diagonal(op_board, offset=0).astype(int)
-            if player_win_str in to_str(root_diag):
+            #add the valid goals to the total
+            if isGoal1 == True and player_num == 1:
+                return True
+            if isGoal2 == True and player_num == 2:
+                return True
+    
+    #diagonals (top left to bottom right)
+    for startRow in range(0, 3):
+        for startCol in range(0, 4):
+            #if invalid position for a player mark it as so
+            isGoal1 = True #assume this goalList is all 0's
+            isGoal2 = True
+            #for each top left to down right goal list
+            for tokenNum in range(0, 4):
+                goalPosR = startRow + tokenNum
+                goalPosC = startCol + tokenNum
+                posVal = board[goalPosR][goalPosC]
+                #if invalid position for a player
+                if (posVal == 1):
+                    isGoal2 = False
+                elif (posVal == 2):
+                    isGoal1 = False
+                else:
+                    isGoal1 = False
+                    isGoal2 = False
+                
+                if isGoal1 == False and isGoal2 == False:
+                    break
+            #add the valid goals to the total
+            if isGoal1 == True and player_num == 1:
+                return True
+            if isGoal2 == True and player_num == 2:
                 return True
 
-            for i in range(1, b.shape[1]-3):
-                for offset in [i, -i]:
-                    diag = np.diagonal(op_board, offset=offset)
-                    diag = to_str(diag.astype(int))
-                    if player_win_str in diag:
-                        return True
+    #diagonals (bottom left to top right)
+    for startRow in range(0, 3):
+        for startCol in range(0, 4):
+            #if invalid position for a player mark it as so
+            isGoal1 = True #assume this goalList is all 0's
+            isGoal2 = True
 
-        return False
+            #for each down left to top right goal list
+            oppositeRow = 5 - startRow
+            for tokenNum in range(0, 4):
+                goalPosR = oppositeRow - tokenNum
+                goalPosC = startCol + tokenNum
+                posVal = board[goalPosR][goalPosC]
+                #if invalid position for a player
+                if (posVal == 1):
+                    isGoal2 = False
+                elif (posVal == 2):
+                    isGoal1 = False
+                else:
+                    isGoal1 = False
+                    isGoal2 = False
+                
+                if isGoal1 == False and isGoal2 == False:
+                    break
+            #add the valid goals to the total
+            if isGoal1 == True and player_num == 1:
+                return True
+            if isGoal2 == True and player_num == 2:
+                return True
 
-    return (check_horizontal(board) or
-            check_verticle(board) or
-            check_diagonal(board))
+
+
+
+
+
+    # player_win_str = '{0}{0}{0}{0}'.format(player_num)
+    # to_str = lambda a: ''.join(a.astype(str))
+
+    # def check_horizontal(b):
+    #     for row in b:
+    #         if player_win_str in to_str(row):
+    #             return True
+    #     return False
+
+    # def check_verticle(b):
+    #     return check_horizontal(b.T)
+
+    # def check_diagonal(b):
+    #     for op in [None, np.fliplr]:
+    #         op_board = op(b) if op else b
+            
+    #         root_diag = np.diagonal(op_board, offset=0).astype(int)
+    #         if player_win_str in to_str(root_diag):
+    #             return True
+
+    #         for i in range(1, b.shape[1]-3):
+    #             for offset in [i, -i]:
+    #                 diag = np.diagonal(op_board, offset=offset)
+    #                 diag = to_str(diag.astype(int))
+    #                 if player_win_str in diag:
+    #                     return True
+
+    #     return False
+
+    # return (check_horizontal(board) or
+    #         check_verticle(board) or
+    #         check_diagonal(board))
 
