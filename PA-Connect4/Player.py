@@ -52,16 +52,65 @@ class AIPlayer:
         RETURNS:
         The 0 based index of the column that represents the next move
         """
+        print("-------------------------------------------------------------------")
+        print(" start of alpha beta move")
 
-        moves = get_valid_moves(board)
+        moves = self.get_working_valid_moves(board)
         best_move = np.random.choice(moves)
 
-        #YOUR ALPHA-BETA CODE GOES HERE
+        print("Base board:")
+        print(board)
+        print("single value:")
+        print(board[0][0])
+        print("Is winning state?")
+        newBoard = np.array([[0]*7]*6)
+        print(is_winning_state(newBoard, self.player_number))
 
+        #YOUR ALPHA-BETA CODE GOES HERE
+        minmax = (-1 * np.inf, np.inf)
+        for move in moves:
+            #don't check above what we are currently deciding
+            #make new board and execute the move
+            newBoard = [[0]*7]*6
+            #copy board values
+            for row in range(0, 6):
+                for col in range(0, 7):
+                    newBoard[row][col] = board[row][col]
+            make_move(newBoard, move, self.player_number)
+
+            value = self.get_recursive_alpha_beta_move(newBoard, self.other_player_number, 0, minmax)
+            
+            if (self.player_number == 1 and value > minmax[0]):
+                minmax[0] = value
+                best_move = move
+            elif (self.player_number == 2 and value < minmax[1]):
+                minmax[1] = value
+                best_move = move
+        
+
+
+
+
+        print("-----------------------------------------------------------------------")
+        print(" end of alpha beta move")
         return best_move
     
+    def get_working_valid_moves(board):
+        valid_moves = []
+        #columns
+        for currCol in range(0, 7):
+            #Look at highest row (row 0)
+            if board[0][currCol] == 0:
+                #add to valid moves
+                valid_moves.append(currCol)
+        return valid_moves
+        
+    
     #return a move
-    def get_recursive_alpha_beta_move(self, board, player_num, depth):
+    def get_recursive_alpha_beta_move(self, board, player_num, depth, parent_range):
+
+        print("current board")
+        print(board)
         # returns a tuple with (action, value associated).
         # Actions that are closer to a goal will return a higher absolute value.
         # Goal states will have the highest absolute value of any state
@@ -80,12 +129,57 @@ class AIPlayer:
         #base case: one player wins
         if (is_winning_state(board, player_num)):
             #return the max value for the current player
-            return 
+            return 300
 
         #base case: tie
         if (get_valid_moves(board) == None):
-            #return the middle value for the current player
+            #return the tie value (not negative or positive)
             return 0
+        
+        if (depth == self.depth_limit):
+            #if we are stopping give our best guess for the current state of the board
+            return self.evaluation_function(board)
+        
+        moves = get_valid_moves(board)
+        minmax = (-1 * np.inf, np.inf)
+        for move in moves:
+
+            if (minmax[0] != -1 * np.inf and player_num == 1 and minmax[0] > parent_range[1]):
+                #skip if the ranges do not coorespond
+                continue
+            elif (minmax[1] != np.inf and player_num == 2 and minmax[1] < parent_range[0]):
+                #skip if the ranges do not coorespond
+                continue
+
+            #make new board and execute the move
+            newBoard = [[0]*7]*6
+            #copy board values
+            for row in range(0, 6):
+                for col in range(0, 7):
+                    newBoard[row][col] = board[row][col]
+            make_move(newBoard, move, player_num)
+
+            #get the value of the new move
+            otherPlayer = None
+            if (player_num == 1):
+                otherPlayer = 2
+            if (player_num == 2):
+                otherPlayer = 1
+            value = self.get_recursive_alpha_beta_move(newBoard, otherPlayer, depth + 1, minmax)
+
+            if (player_num == 1 and value > minmax[0]):
+                minmax[0] = value
+            elif (player_num == 2 and value < minmax[1]):
+                minmax[1] = value
+        
+        if (player_num == 1):
+            return minmax[0]
+        elif (player_num == 2):
+            return minmax[1]
+            
+
+            
+            
 
 
 
@@ -189,6 +283,8 @@ class AIPlayer:
         # most filled goal positions
         # prefer goal positions that cannot be immediatley blocked (there is not a coin under it)
         # prefer positions closer to the middle of the board (more possible combinations)
+
+        print("Start of evaluation function")
 
 
         #return max values for a winning state
@@ -528,6 +624,7 @@ class MCTSNode:
         #    This should look like: self.parent.back(result)
         # Tip: you need to negate the result to account for the fact that the other player
         #    is the actor in the parent node, and so the scores will be from the opposite perspective
+        print("not implemented")
 
     def back(self, score):
         #This updates the stats for this node, then backpropagates things 
@@ -544,9 +641,9 @@ class MCTSNode:
 #player_number moving into move column
 def make_move(board,move,player_number):
     row = 0
-    while row < 6 and board[row,move] == 0:
+    while row < 6 and board[row][move] == 0:
         row += 1
-    board[row-1,move] = player_number
+    board[row-1][move] = player_number
 
 #This function will return a list of valid moves for the given board
 def get_valid_moves(board):
@@ -574,14 +671,14 @@ def is_winning_state(board, player_num):
         for op in [None, np.fliplr]:
             op_board = op(b) if op else b
             
-            root_diag = np.diagonal(op_board, offset=0).astype(np.int)
+            root_diag = np.diagonal(op_board, offset=0).astype(int)
             if player_win_str in to_str(root_diag):
                 return True
 
             for i in range(1, b.shape[1]-3):
                 for offset in [i, -i]:
                     diag = np.diagonal(op_board, offset=offset)
-                    diag = to_str(diag.astype(np.int))
+                    diag = to_str(diag.astype(int))
                     if player_win_str in diag:
                         return True
 
