@@ -3,6 +3,7 @@
 #  - pass command line param string to each AI
 
 import numpy as np
+import time
 
 
 class AIPlayer:
@@ -54,6 +55,7 @@ class AIPlayer:
         """
         print("-------------------------------------------------------------------")
         print(" start of alpha beta move")
+        start_time = time.perf_counter()
 
         moves = self.get_working_valid_moves(board)
         best_move = np.random.choice(moves)
@@ -93,6 +95,8 @@ class AIPlayer:
         print("-----------------------------------------------------------------------")
         print(" end of alpha beta move")
         print("best_move: " + str(best_move))
+        end_time = time.perf_counter()
+        print("time taken to find move: " + str(start_time - end_time))
         return best_move
     
     def get_working_valid_moves(self, board):
