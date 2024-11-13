@@ -57,28 +57,30 @@ class AIPlayer:
 
         moves = self.get_working_valid_moves(board)
         best_move = np.random.choice(moves)
+        
+        depth = 0
 
         print("Base board:")
         print(board)
-        print("single value:")
-        print(board[0][0])
-        print("Is winning state?")
         # newBoard = np.array([[0]*7]*6)
         print(is_winning_state(board, self.player_number))
 
         #YOUR ALPHA-BETA CODE GOES HERE
         minmax = [-1 * np.inf, np.inf]
         for move in moves:
+            print("depth 0")
+            print("considering move: " + str(move))
             #don't check above what we are currently deciding
             #make new board and execute the move
-            newBoard = [[0]*7]*6
+            newBoard = [[0] * 7 for _ in range(6)]
+            #create a new board
             #copy board values
             for row in range(0, 6):
                 for col in range(0, 7):
                     newBoard[row][col] = board[row][col]
             make_move(newBoard, move, self.player_number)
 
-            value = self.get_recursive_alpha_beta_move(newBoard, self.other_player_number, 0, minmax)
+            value = self.get_recursive_alpha_beta_move(newBoard, self.other_player_number, depth + 1, minmax)
             
             if (self.player_number == 1 and value > minmax[0]):
                 minmax[0] = value
@@ -88,11 +90,9 @@ class AIPlayer:
                 best_move = move
         
 
-
-
-
         print("-----------------------------------------------------------------------")
         print(" end of alpha beta move")
+        print("best_move: " + str(best_move))
         return best_move
     
     def get_working_valid_moves(self, board):
@@ -110,7 +110,12 @@ class AIPlayer:
     def get_recursive_alpha_beta_move(self, board, player_num, depth, parent_range):
 
         print("current board")
-        print(board)
+        print(board[0])
+        print(board[1])
+        print(board[2])
+        print(board[3])
+        print(board[4])
+        print(board[5])
         # returns a tuple with (action, value associated).
         # Actions that are closer to a goal will return a higher absolute value.
         # Goal states will have the highest absolute value of any state
@@ -124,8 +129,6 @@ class AIPlayer:
         # Max number of goal states = 24 + 21 + 24 = 69 (nice!)
         # Note: can also get two goal states at the same time (diagonal and vertical for example)
 
-        print("hi there")
-
         #base case: one player wins
         if (is_winning_state(board, player_num)):
             #return the max value for the current player
@@ -136,13 +139,15 @@ class AIPlayer:
             #return the tie value (not negative or positive)
             return 0
         
-        if (depth == self.depth_limit):
+        if (depth >= self.depth_limit):
             #if we are stopping give our best guess for the current state of the board
             return self.evaluation_function(board)
         
         moves = get_valid_moves(board)
         minmax = [-1 * np.inf, np.inf]
         for move in moves:
+            print("depth:" + str(depth))
+            print("considering move: " + str(move))
 
             if (minmax[0] != -1 * np.inf and player_num == 1 and minmax[0] > parent_range[1]):
                 #skip if the ranges do not coorespond
@@ -152,7 +157,7 @@ class AIPlayer:
                 continue
 
             #make new board and execute the move
-            newBoard = [[0]*7]*6
+            newBoard = [[0] * 7 for _ in range(6)]
             #copy board values
             for row in range(0, 6):
                 for col in range(0, 7):
@@ -310,7 +315,7 @@ class AIPlayer:
                 for goalOffsetR in range(3, -1, -1):
                     #go backwards, if we encounter a 0, the rest are also 0
                     goalPosR = startR + goalOffsetR
-                    posVal = board[goalPosR, currCol]
+                    posVal = board[goalPosR][currCol]
                     if (posVal == 1):
                         #filled1Positions += 1
                         isGoal2 = False
@@ -342,7 +347,7 @@ class AIPlayer:
                 isGoal2 = True
                 for goalOffsetC in range(0, 4):
                     goalPosC = startC + goalOffsetC
-                    posVal = board[currRow, goalPosC]
+                    posVal = board[currRow][goalPosC]
                     #if invalid position for a player
                     if (posVal == 1):
                         isGoal2 = False
@@ -370,7 +375,7 @@ class AIPlayer:
                 for tokenNum in range(0, 4):
                     goalPosR = startRow + tokenNum
                     goalPosC = startCol + tokenNum
-                    posVal = board[goalPosR, goalPosC]
+                    posVal = board[goalPosR][goalPosC]
                     #if invalid position for a player
                     if (posVal == 1):
                         isGoal2 = False
@@ -399,7 +404,7 @@ class AIPlayer:
                 for tokenNum in range(0, 4):
                     goalPosR = oppositeRow - tokenNum
                     goalPosC = startCol + tokenNum
-                    posVal = board[goalPosR, goalPosC]
+                    posVal = board[goalPosR][goalPosC]
                     #if invalid position for a player
                     if (posVal == 1):
                         isGoal2 = False
@@ -640,10 +645,13 @@ class MCTSNode:
 #This function will modify the board according to 
 #player_number moving into move column
 def make_move(board,move,player_number):
-    row = 0
-    while row < 6 and board[row][move] == 0:
-        row += 1
-    board[row-1][move] = player_number
+    emptyrow = -1
+    for row in range(5, -1, -1):
+        if (board[row][move] == 0):
+            emptyrow = row
+            break
+    if emptyrow != -1:
+        board[emptyrow][move] = player_number
 
 #This function will return a list of valid moves for the given board
 def get_valid_moves(board):
