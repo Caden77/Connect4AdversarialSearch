@@ -53,8 +53,6 @@ class AIPlayer:
         RETURNS:
         The 0 based index of the column that represents the next move
         """
-        print("-------------------------------------------------------------------")
-        print(" start of alpha beta move")
         start_time = time.perf_counter()
 
         moves = self.get_working_valid_moves(board)
@@ -62,16 +60,9 @@ class AIPlayer:
         
         depth = 0
 
-        print("Base board:")
-        print(board)
-        # newBoard = np.array([[0]*7]*6)
-        print(is_winning_state(board, self.player_number))
-
         #YOUR ALPHA-BETA CODE GOES HERE
         minmax = [-1 * np.inf, np.inf]
         for move in moves:
-            print("depth 0")
-            print("considering move: " + str(move))
             #don't check above what we are currently deciding
             #make new board and execute the move
             newBoard = [[0] * 7 for _ in range(6)]
@@ -96,7 +87,8 @@ class AIPlayer:
         print(" end of alpha beta move")
         print("best_move: " + str(best_move))
         end_time = time.perf_counter()
-        print("time taken to find move: " + str(start_time - end_time))
+
+        print("time taken to find move: " + str(end_time - start_time))
         return best_move
     
     def get_working_valid_moves(self, board):
@@ -112,14 +104,6 @@ class AIPlayer:
     
     #return a move
     def get_recursive_alpha_beta_move(self, board, player_num, depth, parent_range):
-
-        print("current board")
-        print(board[0])
-        print(board[1])
-        print(board[2])
-        print(board[3])
-        print(board[4])
-        print(board[5])
         # returns a tuple with (action, value associated).
         # Actions that are closer to a goal will return a higher absolute value.
         # Goal states will have the highest absolute value of any state
@@ -136,7 +120,11 @@ class AIPlayer:
         #base case: one player wins
         if (is_winning_state(board, player_num)):
             #return the max value for the current player
-            return 300
+            if (player_num == 1):
+                #hi there
+                return 300
+            elif (player_num == 2):
+                return -300
 
         #base case: tie
         if (get_valid_moves(board) == None):
@@ -150,8 +138,6 @@ class AIPlayer:
         moves = get_valid_moves(board)
         minmax = [-1 * np.inf, np.inf]
         for move in moves:
-            print("depth:" + str(depth))
-            print("considering move: " + str(move))
 
             if (minmax[0] != -1 * np.inf and player_num == 1 and minmax[0] > parent_range[1]):
                 #skip if the ranges do not coorespond
@@ -239,15 +225,175 @@ class AIPlayer:
         RETURNS:
         The 0 based index of the column that represents the next move
         """
-        moves = get_valid_moves(board)
+        
+        start_time = time.perf_counter()
+
+        moves = self.get_working_valid_moves(board)
         best_move = np.random.choice(moves)
         
-        #YOUR EXPECTIMAX CODE GOES HERE
-        #Open ended
-        #Idea: look at all touching edges along the board, for touching edges look at what
-        # is being touched, if there are more in a row along that angle then we get a higher score
+        depth = 0
 
+        #YOUR ALPHA-BETA CODE GOES HERE
+        minmax = [-1 * np.inf, np.inf]
+        for move in moves:
+            #don't check above what we are currently deciding
+            #make new board and execute the move
+            newBoard = [[0] * 7 for _ in range(6)]
+            #create a new board
+            #copy board values
+            for row in range(0, 6):
+                for col in range(0, 7):
+                    newBoard[row][col] = board[row][col]
+            make_move(newBoard, move, self.player_number)
+
+            value = self.get_recursive_expectimax_move(newBoard, self.other_player_number, depth + 1, minmax)
+            
+            if (self.player_number == 1 and value > minmax[0]):
+                minmax[0] = value
+                best_move = move
+            elif (self.player_number == 2 and value < minmax[1]):
+                minmax[1] = value
+                best_move = move
+        
+
+        print("-----------------------------------------------------------------------")
+        print(" end of expectimax move")
+        print("Depth limit: " + str(self.depth_limit))
+        print("best_move: " + str(best_move))
+        end_time = time.perf_counter()
+
+        print("time taken to find move: " + str(end_time - start_time))
         return best_move
+
+    def get_recursive_expectimax_move(self, board, player_num, depth, parent_range):
+        # returns a tuple with (action, value associated).
+        # Actions that are closer to a goal will return a higher absolute value.
+        # Goal states will have the highest absolute value of any state
+
+        #possible combinations:
+        # Horizontal: 4 different ways per row (6 rows) = 24 goal states
+        # Vertical: 3 different ways per column (7 col) = 21 goal states
+        # Diagonal: Requires a 4x4 grid, 2 times per grid.
+        #           3 different grids vertically, 4 different grids horizontally.
+        #           (2 * 3 * 4) = 24 goal states
+        # Max number of goal states = 24 + 21 + 24 = 69 (nice!)
+        # Note: can also get two goal states at the same time (diagonal and vertical for example)
+
+        highestVal = 300
+        lowestVal = -300
+
+        #-------------- base cases (don't change) --------------------#
+
+        otherPlayer = None
+        if (player_num == 1):
+            otherPlayer = 2
+        if (player_num == 2):
+            otherPlayer = 1
+
+        #base case: one player wins
+        if (is_winning_state(board, player_num)):
+            #return the max value for the current player
+            if (player_num == 1):
+                #hi there
+                return highestVal
+            elif (player_num == 2):
+                return lowestVal
+        #prevent unnecessary depth with a check for the other player winning
+        if (is_winning_state(board, otherPlayer)):
+            if (otherPlayer == 1):
+                return highestVal
+            elif (otherPlayer == 2):
+                return lowestVal
+
+        #base case: tie
+        if (get_valid_moves(board) == None):
+            #return the tie value (not negative or positive)
+            return 0
+        
+        #base case: hit depth limit
+        if (depth >= self.depth_limit):
+            #if we are stopping give our best guess for the current state of the board
+            return self.evaluation_function(board)
+
+        #----------------------------------------------------#
+        
+        moves = get_valid_moves(board)
+        minmax = [-1 * np.inf, np.inf]
+        #get the values and associated probabilities for each decision
+        probs = [1.0 / len(moves)] * len(board[0])
+        highVals = [np.inf] * len(board[0])
+        lowVals = [-np.inf] * len(board[0])
+        exploredMoves = []
+        highValAvg = 0
+        lowValAvg = 0
+        for move in moves:
+
+            #skip if the ranges do not coorespond
+            if (minmax[0] != -1 * np.inf and minmax[0] > parent_range[1]):
+                continue
+            elif (minmax[1] != np.inf and minmax[1] < parent_range[0]):
+                continue
+
+            #mark moves that we are exploring
+            exploredMoves.append(move)
+
+            #make new board and execute the move
+            newBoard = [[0] * 7 for _ in range(6)]
+            #copy board values
+            for row in range(0, 6):
+                for col in range(0, 7):
+                    newBoard[row][col] = board[row][col]
+            #update board
+            make_move(newBoard, move, player_num)
+
+            #get the value of the new move
+            value = self.get_recursive_expectimax_move(newBoard, otherPlayer, depth + 1, minmax)
+
+            #update the expectimax value
+            if (player_num == self.player_number):
+                #This AI player uses alpha beta, model it as such
+                if (player_num == 1):
+                    #Maximize minimax[0]
+                    if (value > minmax[0]):
+                        minmax[0] = value
+                if (player_num == 2):
+                    #Minimize minmax[1]
+                    if (value < minmax[1]):
+                        minmax[1] = value
+            elif (player_num == self.other_player_number):
+                #Model the other player as random choice
+                #store the current value for this move inside the high and low vals arrays
+                highVals[move - 1] = value
+                lowVals[move - 1] = value
+
+                #update max
+                #for every move, multiply the moves probability by it's value
+                highValAvg = 0
+                for movInd in range(len(moves)):
+                    #if have a high value, use the high value
+                    if highVals[movInd] != np.inf:
+                        highValAvg += highVals[movInd] * probs[movInd]
+                    else:
+                        highValAvg += highestVal * probs[movInd]
+
+                #update min
+                lowValAvg = 0
+                for movInd in range(len(moves)):
+                    #if have a low value, use the low value
+                    if lowVals[movInd] != -np.inf:
+                        lowValAvg += lowVals[movInd] * probs[movInd]
+                    else:
+                        lowValAvg += lowestVal * probs[movInd]
+        
+        if (player_num == self.player_number):
+            #use alpha beta
+            if (player_num == 1):
+                return minmax[0]
+            elif (player_num == 2):
+                return minmax[1]
+        elif (player_num == self.other_player_number):
+            #use random, if children are pruned this value should not affect the parent node
+            return highValAvg
 
 
     def evaluation_function(self, board):
@@ -292,8 +438,6 @@ class AIPlayer:
         # most filled goal positions
         # prefer goal positions that cannot be immediatley blocked (there is not a coin under it)
         # prefer positions closer to the middle of the board (more possible combinations)
-
-        print("Start of evaluation function")
 
 
         #return max values for a winning state
