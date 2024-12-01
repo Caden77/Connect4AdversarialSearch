@@ -3,6 +3,7 @@
 #  - pass command line param string to each AI
 
 import math
+import random
 import numpy as np
 import time
 
@@ -760,11 +761,22 @@ class MCTSNode:
         #
         # Else-if this state is terminal AND is a winning state for self.player_number
         #   Then we are done and the result is -1 (since this is from parent's perspective)
+
+        if is_winning_state(self.board, self.other_player_number):
+            return 1
+        elif is_winning_state(self.board, self.player_number):
+            return -1
+        elif len(get_valid_moves(self.board)) == 0:
+            #terminal state ending in a tie
+            return 0
+
         #
         # Else-if this is not a terminal state (if it is terminal and a tie (no-one won, then result is 0))
         #   Then we need to perform the random rollout
         #      1. Make a copy of the board to modify
+        newBoard = copy_board(self.board)
         #      2. Keep track of which player's turn it is (first turn is current nodes self.player_number)
+
         #      3. Until the game is over: 
         #            3.1  Make a random move for the player who's turn it is
         #            3.2  Check to see if someone won or the game ended in a tie 
@@ -772,15 +784,44 @@ class MCTSNode:
         #            3.3  If the game is over, store the result
         #            3.4  If game is not over, change the player and continue the loop
         #
-        # Update this node's total reward (self.w) and visit count (self.n) values to reflect this visit and result
+        isTerminalState = False
+        playerNum = self.player_number
+        gameValue = 0
+        while (isTerminalState):
+            #Make random move for player
+            moves = get_valid_moves(newBoard)
+            randInd = random.randint(0, len(moves) - 1)
+            randMove = moves[randInd]
+            make_move(newBoard, randMove, playerNum)
 
+            #Check for winning condition
+            if is_winning_state(newBoard, playerNum):
+                if playerNum == self.player_number:
+                    gameValue = 1
+                else:
+                    gameValue = -1
+                break
+            elif len(get_valid_moves(newBoard)) == 0:
+                #terminal state ending in a tie
+                gameValue = 0
+                break
+
+            #Change player
+            if playerNum == 1:
+                playerNum = 2
+            elif playerNum == 2:
+                playerNum = 1
+
+        # Update this node's total reward (self.w) and visit count (self.n) values to reflect this visit and result
+        self.n += 1
+        self.w += gameValue
 
         # Back-propagate this result
         # You do this by calling back on the parent of this node with the result of this simulation
         #    This should look like: self.parent.back(result)
+        self.parent.back(-gameValue)
         # Tip: you need to negate the result to account for the fact that the other player
         #    is the actor in the parent node, and so the scores will be from the opposite perspective
-        print("not implemented")
 
     def back(self, score):
         #This updates the stats for this node, then backpropagates things 
@@ -935,6 +976,18 @@ def is_winning_state(board, player_num):
                 return True
             if isGoal2 == True and player_num == 2:
                 return True
+            
+
+def copy_board(board):
+    #make new board and execute the move
+    newBoard = [[0] * 7 for _ in range(6)]
+    #create a new board
+    #copy board values
+    for row in range(0, 6):
+        for col in range(0, 7):
+            newBoard[row][col] = board[row][col]
+    
+    return newBoard
 
 
 
