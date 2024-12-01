@@ -2,6 +2,7 @@
 #  - incorporate MCTS with other code
 #  - pass command line param string to each AI
 
+import math
 import numpy as np
 import time
 
@@ -704,10 +705,12 @@ class MCTSNode:
         #N is the number of samples for the parent node, to be used in UCB calculation
 
         # YOUR MCTS TASK 1 CODE GOES HERE
+        mean = self.w / self.n
+        deviation = self.c * (math.sqrt(math.log(N, math.e)) / self.n)
 
         #To do: return the UCB for this node (look in __init__ to see the values you can use)
 
-        return 0
+        return mean + deviation
 
     def select(self):
         #This recursive function combines the selection and expansion steps of the MCTS algorithm
