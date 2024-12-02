@@ -203,6 +203,8 @@ class AIPlayer:
 
         #Print out the info from the root node
         root.print_node()
+        # #Debug TODO:get rid of
+        # root.print_tree()
         print('MCTS chooses action', root.max_child())
         return root.max_child()
 
@@ -673,7 +675,7 @@ class MCTSNode:
     def print_tree(self):
         #Debugging utility that will print the whole subtree starting at this node
         print("****")
-        print_node(self)
+        self.print_node()
         for m in self.moves:
             if self.children[m]:
                 self.children[m].print_tree()
@@ -706,8 +708,16 @@ class MCTSNode:
         #N is the number of samples for the parent node, to be used in UCB calculation
 
         # YOUR MCTS TASK 1 CODE GOES HERE
-        mean = self.w / self.n
-        deviation = self.c * (math.sqrt(math.log(N, math.e)) / self.n)
+        mean = 0
+        deviation = 0
+        if (self.n != 0):
+            mean = self.w / self.n
+            deviation = self.c * (math.sqrt(math.log(N, math.e)) / self.n)
+        else:
+            print("N:" + str(N))
+            print("c:" + str(self.c))
+            mean = self.w
+            deviation = self.c * (math.sqrt(math.log(N, math.e)))
 
         #To do: return the UCB for this node (look in __init__ to see the values you can use)
 
@@ -762,12 +772,18 @@ class MCTSNode:
         # Else-if this state is terminal AND is a winning state for self.player_number
         #   Then we are done and the result is -1 (since this is from parent's perspective)
 
-        if is_winning_state(self.board, self.other_player_number):
+        if self.terminal and is_winning_state(self.board, self.other_player_number):
+            self.n += 1
+            self.w += 1
             return 1
-        elif is_winning_state(self.board, self.player_number):
+        elif self.terminal and is_winning_state(self.board, self.player_number):
+            self.n += 1
+            self.w += -1
             return -1
-        elif len(get_valid_moves(self.board)) == 0:
+        elif self.terminal and len(get_valid_moves(self.board)) == 0:
             #terminal state ending in a tie
+            self.n += 1
+            self.w += 0
             return 0
 
         #
@@ -784,10 +800,9 @@ class MCTSNode:
         #            3.3  If the game is over, store the result
         #            3.4  If game is not over, change the player and continue the loop
         #
-        isTerminalState = False
         playerNum = self.player_number
         gameValue = 0
-        while (isTerminalState):
+        while (True):
             #Make random move for player
             moves = get_valid_moves(newBoard)
             randInd = random.randint(0, len(moves) - 1)
@@ -797,9 +812,9 @@ class MCTSNode:
             #Check for winning condition
             if is_winning_state(newBoard, playerNum):
                 if playerNum == self.player_number:
-                    gameValue = 1
-                else:
                     gameValue = -1
+                else:
+                    gameValue = 1
                 break
             elif len(get_valid_moves(newBoard)) == 0:
                 #terminal state ending in a tie
